@@ -15,6 +15,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const AFK_ROLE_NAME = 'MIA';
 const ON_LEAVE_CHANNEL_NAME = 'on-leave-notice';
 const GAME_CATEGORIES = [
+    'THE HIGH COUNCIL',
     'ECHOES OF INTERACTION',
     'THE VOICE OF EQUILIBRIUM',
     'THRONE & LIBERTY VOICE',
@@ -109,8 +110,8 @@ async function checkInactivity() {
             try {
                 await member.roles.add(afkRole);
                 await member.send(
-                    'You have been marked as MIA due to 7 days of inactivity. \n'
-                    + 'Send a message in any game channel or join a voice channel to remove this role.'
+                    'You have been marked as MIA due to 7 days of inactivity. \n' +
+                    'Send a message in any game channel or join a voice channel to remove this role.'
                 );
                 console.log(`Assigned MIA role to ${member.user.tag}`);
             } catch (error) {
@@ -126,7 +127,7 @@ client.on('ready', () => {
 
     // Set a witty presence
     client.user.setPresence({
-        activities: [{ name: 'Trying to figure out if AFK is a lifestyle or a mistake 🤔' }],
+        activities: [{ name: 'Is AFK is a lifestyle or a mistake 🤔' }],
         status: 'online'
     });
 
@@ -139,7 +140,35 @@ client.on('ready', () => {
 
 // Event: Message sent
 client.on('messageCreate', async message => {
-    if (message.author.bot) return;
+    if (message.content === '!mia-stats') {
+        console.log('!mia-stats command triggered.');
+        const guild = message.guild;
+    
+        if (!guild) {
+            console.error('Command triggered outside of a guild.');
+            message.channel.send('This command can only be used in a server.');
+            return;
+        }
+    
+        const afkRole = guild.roles.cache.find(role => role.name === AFK_ROLE_NAME);
+    
+        if (!afkRole) {
+            console.warn('AFK role not found in the server.');
+            message.channel.send('AFK role not found. Please ensure the role exists and try again.');
+            return;
+        }
+    
+        const miaMembers = guild.members.cache.filter(member => member.roles.cache.has(afkRole.id));
+    
+        message.channel.send(
+            `**MIA Statistics:**\n` +
+            `Total members with MIA role: ${miaMembers.size}\n` +
+            (miaMembers.size > 0
+                ? `Members: ${miaMembers.map(member => member.user.tag).join(', ')}`
+                : 'No members are currently marked as MIA.')
+        );
+    }
+    
 
     if (isInGameCategory(message.channel)) {
         updateActivity(message.author.id);
@@ -150,7 +179,7 @@ client.on('messageCreate', async message => {
         if (afkRole && message.member.roles.cache.has(afkRole.id)) {
             try {
                 await message.member.roles.remove(afkRole);
-                await message.author.send('Welcome back! Your MIA status has been removed.');
+                await message.author.send('Welcome back! \n Your MIA status has been removed.');
                 console.log(`Removed MIA role from ${message.author.tag}`);
             } catch (error) {
                 console.error('Failed to remove MIA role:', error);
